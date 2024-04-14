@@ -18,43 +18,35 @@ class Context
     {
         my $entity_id = $next_entity_id++;
         $entities{$entity_id} = \%c;
-        for my $key (keys %c)
-        {
-            push $components{$key}->@*, $c{$key};
-        }
+        push $components{$_}->@*, $c{$_} for (keys %c);
         return $entity_id
     }
 
-    method get_entity ($entity_id)
+    method get_components_by_id (@entity_id)
     {
-        return $entities{$entity_id}
+        return map { $entities{$_} } @entity_id
     }
 
-    method add_processor ($processor)
+    method add_processor (@processor)
     {
-        push @processors, $processor;
+        push @processors, $_ for @processor;
         return
     }
 
-    method get_components (@component_names)
+    method get_components_by_type (@component_names)
     {
         return ($components{$component_names[0]} // [])->@*
             if @component_names == 1;
 
-        my @components =
+        return
             map { my $e = $_; map { $e->{$_} } @component_names }
             grep { my $e = $_; all { $e->{$_} } @component_names }
             values %entities;
-
-        return @components
     }
 
     method update ()
     {
-        for my $processor (@processors)
-        {
-            $processor->($self);
-        }
+        $_->($self) for @processors;
         return
     }
 }
@@ -74,7 +66,7 @@ my $e3 = $ctx->add_entity (
 
 sub move_it ($ctx)
 {
-    my @components = $ctx->get_components('position', 'velocity');
+    my @components = $ctx->get_components_by_type('position', 'velocity');
     for my ($position, $velocity) (@components)
     {
         $position->{x} += $velocity->{x};
@@ -87,7 +79,7 @@ my @greeted;
 
 sub greet ($ctx)
 {
-    my @components = $ctx->get_components('name');
+    my @components = $ctx->get_components_by_type('name');
     @components;
     for my ($name) (@components)
     {
@@ -101,7 +93,7 @@ $ctx->add_processor(\&move_it);
 $ctx->add_processor(\&greet);
 $ctx->update();
 
-my $e1_components = $ctx->get_entity($e1);
+my ($e1_components) = $ctx->get_components_by_id($e1);
 is $e1_components->{position}{x}, 1;
 is $e1_components->{position}{y}, 1;
 is $e1_components->{velocity}{x}, 1;
