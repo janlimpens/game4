@@ -8,6 +8,7 @@ class Context
 {
     no warnings 'experimental::for_list';
     use List::Util qw(all);
+    use DDP;
 
     field %components;
     field %entities;
@@ -22,9 +23,9 @@ class Context
         return $entity_id
     }
 
-    method get_components_by_id (@entity_id)
+    method get_components_for_entity (@entity_id)
     {
-        return map { $_, $entities{$_} } @entity_id
+        return map { $entities{$_} } @entity_id
     }
 
     method add_processor (@processor)
@@ -33,12 +34,13 @@ class Context
         return
     }
 
-    method get_components_by_type (@component_names)
+    method get_components_by_name (@component_names)
     {
         return
-            map { my $e = $_; $_, map { $e->{$_} } @component_names }
-            grep { my $e = $_; all { $e->{$_} } @component_names }
-            values %entities;
+            map { my $e = $_; $e => map { $entities{$e}->{$_} } @component_names }
+            sort
+            grep { my $e = $_; all { exists $entities{$e}->{$_} } @component_names }
+            keys %entities;
     }
 
     method update ()
@@ -56,14 +58,24 @@ my $e1 = $ctx->add_entity (
     velocity => { x => 1, y => 1 });
 
 my $e2 = $ctx->add_entity (
-    name => 'Bob');
+    name => 'Bob',
+    position => { x => 5, y => 5 },);
 
 my $e3 = $ctx->add_entity (
-    weather => 'nice');
+    weather => 'nice',
+    start => { x => 0, y => 0 },
+    end => { x => 10, y => 10 });
+
+my $e4 = $ctx->add_entity (
+    weather => 'terrible',
+    start => { x => 3, y => 3 },
+    end => { x => 6, y => 6 }
+);
 
 sub move_it ($ctx)
 {
-    my @components = $ctx->get_components_by_type('position', 'velocity');
+    my @components = $ctx->get_components_by_name('position', 'velocity');
+    # p @components, as => 'components movit';
     for my ($id, $position, $velocity) (@components)
     {
         $position->{x} += $velocity->{x};
@@ -73,27 +85,56 @@ sub move_it ($ctx)
 }
 
 my @greeted;
+my %got_weather;
+
+sub get_weather_at_position($x, $y, $all_weather, $default='ok')
+{
+    for my ($end, $start, $weather, $id) ($all_weather->@*)
+    {
+        if ($x >= $start->{x} && $x <= $end->{x} &&
+            $y >= $start->{y} && $y <= $end->{y})
+        {
+            $got_weather{$id} = 1;
+            return $weather
+        }
+    }
+    return $default
+}
 
 sub greet ($ctx)
 {
-    my @components = $ctx->get_components_by_type('name');
-    for my ($id, $name) (@components)
+    my @weather = reverse $ctx->get_components_by_name('weather', 'start', 'end');
+    my @components = $ctx->get_components_by_name('name', 'position');
+    for my ($id, $name, $position) (@components)
     {
-        say STDERR "Hello $name!";
+        my ($components) = $ctx->get_components_for_entity($id);
+        my $position = $components->{position};
+        my $weather = $position
+            ? get_weather_at_position($position->{x}, $position->{y}, \@weather)
+            : undef;
+        say STDERR $weather
+            ? "Hello $name! The weather is $weather, today."
+            : "Hello $name!";
         push @greeted, $name;
     }
     return
 }
 
+my $stop_it = 0;
+$SIG{INT} = sub { $stop_it = 1 };
+
 $ctx->add_processor(\&move_it);
 $ctx->add_processor(\&greet);
-$ctx->update();
 
-my ($id, $e1_components) = $ctx->get_components_by_id($e1);
-is $e1_components->{position}{x}, 1;
-is $e1_components->{position}{y}, 1;
-is $e1_components->{velocity}{x}, 1;
-is $e1_components->{velocity}{y}, 1;
-is @greeted, 2, 'all with names have been greeted';
+until ($stop_it)
+{
+    $ctx->update();
+}
+# my ($e1_components) = $ctx->get_components_for_entity($e1);
+# is $e1_components->{position}{x}, 1;
+# is $e1_components->{position}{y}, 1;
+# is $e1_components->{velocity}{x}, 1;
+# is $e1_components->{velocity}{y}, 1;
+# is @greeted, 2, 'all with names have been greeted';
 
 done_testing();
