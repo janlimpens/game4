@@ -24,7 +24,7 @@ class Context
 
     method get_components_by_id (@entity_id)
     {
-        return map { $entities{$_} } @entity_id
+        return map { $_, $entities{$_} } @entity_id
     }
 
     method add_processor (@processor)
@@ -35,11 +35,8 @@ class Context
 
     method get_components_by_type (@component_names)
     {
-        return ($components{$component_names[0]} // [])->@*
-            if @component_names == 1;
-
         return
-            map { my $e = $_; map { $e->{$_} } @component_names }
+            map { my $e = $_; $_, map { $e->{$_} } @component_names }
             grep { my $e = $_; all { $e->{$_} } @component_names }
             values %entities;
     }
@@ -67,7 +64,7 @@ my $e3 = $ctx->add_entity (
 sub move_it ($ctx)
 {
     my @components = $ctx->get_components_by_type('position', 'velocity');
-    for my ($position, $velocity) (@components)
+    for my ($id, $position, $velocity) (@components)
     {
         $position->{x} += $velocity->{x};
         $position->{y} += $velocity->{y};
@@ -80,8 +77,7 @@ my @greeted;
 sub greet ($ctx)
 {
     my @components = $ctx->get_components_by_type('name');
-    @components;
-    for my ($name) (@components)
+    for my ($id, $name) (@components)
     {
         say STDERR "Hello $name!";
         push @greeted, $name;
@@ -93,7 +89,7 @@ $ctx->add_processor(\&move_it);
 $ctx->add_processor(\&greet);
 $ctx->update();
 
-my ($e1_components) = $ctx->get_components_by_id($e1);
+my ($id, $e1_components) = $ctx->get_components_by_id($e1);
 is $e1_components->{position}{x}, 1;
 is $e1_components->{position}{y}, 1;
 is $e1_components->{velocity}{x}, 1;
