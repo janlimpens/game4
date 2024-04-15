@@ -1,8 +1,8 @@
 use v5.38;
 use feature 'class';
-use Test2::V0;
 use DDP;
 no warnings 'experimental';
+use List::Util qw(all any);
 
 class Context
 {
@@ -26,6 +26,11 @@ class Context
     method get_components_for_entity (@entity_id)
     {
         return map { $entities{$_} } @entity_id
+    }
+
+    method entity_has_component ($entity_id, @component_name)
+    {
+        return all { exists $entities{$entity_id}->{$_} } @component_name
     }
 
     method add_processor (@processor)
@@ -55,11 +60,13 @@ my $ctx = Context->new();
 my $e1 = $ctx->add_entity (
     name => 'Alice',
     position => { x => 0, y => 0 },
-    velocity => { x => 1, y => 1 });
+    velocity => 1,
+    interactive => 1,);
 
 my $e2 = $ctx->add_entity (
     name => 'Bob',
-    position => { x => 5, y => 5 },);
+    position => { x => 5, y => 5 },
+    greeter => 1,);
 
 my $e3 = $ctx->add_entity (
     weather => 'nice',
@@ -72,50 +79,114 @@ my $e4 = $ctx->add_entity (
     end => { x => 6, y => 6 }
 );
 
-sub move_it ($ctx)
+my %positions;
+my %names;
+
+# on_name_changed event
+sub get_names ($ctx)
 {
-    my @components = $ctx->get_components_by_name('position', 'velocity');
-    # p @components, as => 'components movit';
-    for my ($id, $position, $velocity) (@components)
+    %names = ();
+    my @components = $ctx->get_components_by_name('name');
+    for my ($id, $name, $position) (@components)
     {
-        $position->{x} += $velocity->{x};
-        $position->{y} += $velocity->{y};
+        $names{$id} = $name;
     }
     return
 }
 
-my @greeted;
-my %got_weather;
+# on_position_changed event
+sub get_positions ($ctx)
+{
+    %positions = ();
+    my @components = $ctx->get_components_by_name('position');
+    for my ($id, $position) (@components)
+    {
+        push $positions{$position->{x}}{$position->{y}}->@*, $id;
+    }
+    # p %positions;
+    return
+}
 
-sub get_weather_at_position($x, $y, $all_weather, $default='ok')
+sub get_weather_at_position($pos, $all_weather, $default='ok')
 {
     for my ($end, $start, $weather, $id) ($all_weather->@*)
     {
-        if ($x >= $start->{x} && $x <= $end->{x} &&
-            $y >= $start->{y} && $y <= $end->{y})
-        {
-            $got_weather{$id} = 1;
-            return $weather
-        }
+        return $weather
+            if $pos->{x} >= $start
+            && $pos->{x} <= $end
+            && $pos->{y} >= $start
+            && $pos->{y} <= $end
     }
     return $default
 }
 
+sub is_adjacent($pos1, $pos2)
+{
+    return abs($pos1->{x} - $pos2->{x}) <= 1 && abs($pos1->{y} - $pos2->{y}) <= 1
+}
+
+sub get_adjacent_entities($pos)
+{
+    my @adjacent_entities;
+    for my $x ($pos->{x} - 1 .. $pos->{x} + 1)
+    {
+        for my $y ($pos->{y} - 1 .. $pos->{y} + 1)
+        {
+            push @adjacent_entities, $positions{$x}{$y}->@*
+                if exists $positions{$x}{$y};
+        }
+    }
+    return @adjacent_entities
+}
+
 sub greet ($ctx)
 {
-    my @weather = reverse $ctx->get_components_by_name('weather', 'start', 'end');
-    my @components = $ctx->get_components_by_name('name', 'position');
-    for my ($id, $name, $position) (@components)
+    my $all_weather = [reverse $ctx->get_components_by_name('weather', 'start', 'end')];
+
+    my @greeters = $ctx->get_components_by_name('greeter', 'name', 'position');
+
+    for my ($id, $greeter, $name, $position) (@greeters)
     {
-        my ($components) = $ctx->get_components_for_entity($id);
-        my $position = $components->{position};
-        my $weather = $position
-            ? get_weather_at_position($position->{x}, $position->{y}, \@weather)
-            : undef;
-        say STDERR $weather
-            ? "Hello $name! The weather is $weather, today."
-            : "Hello $name!";
-        push @greeted, $name;
+        my @adjacent = grep { $names{$_} } get_adjacent_entities($position);
+        next unless @adjacent;
+        my $weather = get_weather_at_position($position, $all_weather);
+        for my $adjacent (@adjacent)
+        {
+            my $adj_name = $names{$adjacent};
+            say STDERR $weather
+                ? "$name: Hello $adj_name! The weather is $weather, today."
+                : "$name: Hello $adj_name!";
+        }
+    }
+    return
+}
+
+sub move_interactively ($ctx)
+{
+    my @components = $ctx->get_components_by_name(qw(name position velocity interactive));
+    for my ($id, $name, $position, $velocity, $interactive) (@components)
+    {
+        say "Move $name ($id) to where? [n, ne, e, se, s, sw, w, nw]";
+        my $bearing = <STDIN>;
+        chomp $bearing;
+        my %movements = (
+            n => [0, 1],
+            ne => [1, 1],
+            e => [1, 0],
+            se => [1, -1],
+            s => [0, -1],
+            sw => [-1, -1],
+            w => [-1, 0],
+            nw => [-1, 1],
+        );
+        if (my $movement = $movements{$bearing})
+        {
+            $position->{x} += $movement->[0] * $velocity;
+            $position->{y} += $movement->[1] * $velocity;
+            say "$name moved to $position->{x}, $position->{y}";
+        } else {
+            say "Invalid bearing: $bearing";
+        }
     }
     return
 }
@@ -123,18 +194,13 @@ sub greet ($ctx)
 my $stop_it = 0;
 $SIG{INT} = sub { $stop_it = 1 };
 
-$ctx->add_processor(\&move_it);
+$ctx->add_processor(\&get_names);
+$ctx->add_processor(\&move_interactively);
+$ctx->add_processor(\&get_positions);
 $ctx->add_processor(\&greet);
 
 until ($stop_it)
 {
-    $ctx->update();
+    $ctx->update()
+        unless $stop_it;
 }
-# my ($e1_components) = $ctx->get_components_for_entity($e1);
-# is $e1_components->{position}{x}, 1;
-# is $e1_components->{position}{y}, 1;
-# is $e1_components->{velocity}{x}, 1;
-# is $e1_components->{velocity}{y}, 1;
-# is @greeted, 2, 'all with names have been greeted';
-
-done_testing();
