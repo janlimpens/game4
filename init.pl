@@ -55,18 +55,31 @@ class Context
     }
 }
 
+
+my $stop_it = 0;
+$SIG{INT} = sub { $stop_it = 1 };
+
 my $ctx = Context->new();
 
 my $e1 = $ctx->add_entity (
     name => 'Alice',
     position => { x => 0, y => 0 },
     velocity => 1,
-    interactive => 1,);
+    interactive => {
+        move => undef,
+        look_around => undef,
+        inspect => undef,
+        quit => undef
+    },
+    inventory => []);
 
 my $e2 = $ctx->add_entity (
     name => 'Bob',
     position => { x => 5, y => 5 },
-    greeter => 1,);
+    greeter => 1,
+    npc => {
+        walks_around => 3
+    });
 
 my $e3 = $ctx->add_entity (
     weather => 'nice',
@@ -120,11 +133,6 @@ sub get_weather_at_position($pos, $all_weather, $default='ok')
     return $default
 }
 
-sub is_adjacent($pos1, $pos2)
-{
-    return abs($pos1->{x} - $pos2->{x}) <= 1 && abs($pos1->{y} - $pos2->{y}) <= 1
-}
-
 sub get_adjacent_entities($pos)
 {
     my @adjacent_entities;
@@ -161,6 +169,38 @@ sub greet ($ctx)
     return
 }
 
+my %last_action;
+
+sub interact ($ctx)
+{
+    my @components = $ctx->get_components_by_name(qw(interactive));
+    for my ($id, $interactive) (@components)
+    {
+        my $action;
+        until ($action)
+        {
+            say sprintf 'What should I do? [%s]', join ', ', sort keys $interactive->%*;
+            my $a = <STDIN>;
+            chomp $a;
+            if ($a eq '.' && exists $last_action{$id})
+            {
+                $a = $last_action{$id};
+            } elsif (exists $interactive->{$a}) {
+                $last_action{$id} = $action = $a;
+            } else {
+                say "I can't do that!";
+            }
+        }
+        my %actions = (
+            move => \&move_interactively,
+            look_around => sub { say "Look around!" },
+            inspect => sub { say "Inspect!" },
+            quit => sub { say "Goodbye!"; $stop_it = 1 },
+        );
+        $actions{$action}->($ctx);
+    }
+}
+
 sub move_interactively ($ctx)
 {
     my @components = $ctx->get_components_by_name(qw(name position velocity interactive));
@@ -191,11 +231,8 @@ sub move_interactively ($ctx)
     return
 }
 
-my $stop_it = 0;
-$SIG{INT} = sub { $stop_it = 1 };
-
 $ctx->add_processor(\&get_names);
-$ctx->add_processor(\&move_interactively);
+$ctx->add_processor(\&interact);
 $ctx->add_processor(\&get_positions);
 $ctx->add_processor(\&greet);
 
