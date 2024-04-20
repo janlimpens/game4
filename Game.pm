@@ -33,9 +33,9 @@ class Game:isa(ECS::Tiny::Context)
     method start($times=undef)
     {
         $self->add_processor(\&get_names);
-        $self->add_processor(\&interact_dispatcher);
         $self->add_processor(\&get_positions);
         $self->add_processor(\&greet);
+        $self->add_processor(\&interact_dispatcher);
         my $count = 0;
         until ($stop_it)
         {
@@ -94,11 +94,12 @@ class Game:isa(ECS::Tiny::Context)
 
     method get_adjacent_entities($pos, $distance=1)
     {
+        # p $pos, as => 'pos';
         return unless $pos;
         $pos = bless $pos, 'Game::Point';
 
-        return $position_to_entities{$pos->key()}->@*
-            if $position_to_entities{$pos->key()} && $distance < 1;
+        return ($position_to_entities{$pos->key()}//[])->@*
+            if $distance < 1;
 
         my @entities =
             map { $position_to_entities{$_->key()}->@* }
