@@ -13,6 +13,12 @@ class ECS::Tiny::Context
     field @processors;
     field $next_entity_id = 0;
 
+    method dump()
+    {
+        p %entities;
+        return
+    }
+
     method add_entity (%c)
     {
         my $entity_id = $next_entity_id++;
@@ -32,6 +38,12 @@ class ECS::Tiny::Context
             $entities{$entity}->%*,
             %components, # we need better merging
         };
+        return
+    }
+
+    method remove_component($entity, @component)
+    {
+        delete $entities{$entity}->{$_} for @component;
         return
     }
 

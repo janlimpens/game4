@@ -6,41 +6,35 @@ use lib '.';
 use Game;
 use DDP;
 
-subtest get_distance => sub
-{
-    my $ctx = Game->new();
-    my $d1 = $ctx->get_distance(
-        {x => 1, y => 1},
-        {x => 1, y => 10}
-    );
-    is $d1, 9, 'got vertical distance';
+my $ctx = Game->new();
 
-    my $dh = $ctx->get_distance(
-        { x => 10, y => 1},
-        { x => 20 => y => 1}
-    );
-    is $dh, 10, 'got horizontal dist';
+my $e00 = $ctx->add_entity (
+    name => 'e(0/0)',
+    position => { x => 0, y => 0 } );
 
-    my $dd = $ctx->get_distance(
-        { x => 0, y => 0 },
-        { x => 1, y => 1 }
-    );
+my $e01 = $ctx->add_entity (
+    name => 'e(0/1)',
+    position => { x => 0, y => 1 } );
 
-};
+my $e77 = $ctx->add_entity (
+    name => 'e(7/7)',
+    position => { x => 7, y => 7 } );
 
-subtest is_within_range => sub
-{
-    my $ctx = Game->new();
+my $e2020 = $ctx->add_entity (
+    name => 'e(20/20)',
+    position => { x => 20, y => 20 } );
 
-    my $e11 = { x => 1, y => 1 };
-    my $e12 = { x => 1, y => 2 };
-    my $e22 = { x => 2, y => 2 };
-    my $e44 = { x => 4, y => 4 };
+# $DB::single = 1;
+$ctx->start(1);
+# p $ctx->dump();
+my @adjacent = $ctx->get_adjacent_entities({ x => 0, y => 1 }, 5);
 
-    ok( $ctx->is_within_range(1, $e11, $e22), 'e11 and e22 are adjacent' );
-    ok( $ctx->is_within_range(1, $e11, $e12), 'e11 and e12 are adjacent' );
-    ok( !$ctx->is_within_range(1, $e11, $e44), "e11 and e44 are't adjacent" );
-    ok( $ctx->is_within_range(3, $e11, $e44), 'but e11 and e44 are 3 apart' );
-};
+is \@adjacent, [ $e00, $e01 ], 'adjacent entities';
 
+my $look_around = $ctx->look_around($e00, 9);
+# p $look_around, as => 'look around';
+is $look_around->{'e(0/1)'}->key(), '0/1', 'Game::Point', 'look around';
+is $look_around->{'e(7/7)'}->key(), '7/7', 'Game::Point', 'look around';
+
+# p $look_around;
 done_testing();

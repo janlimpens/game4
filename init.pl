@@ -8,18 +8,27 @@ my $ctx = Game->new();
 
 $SIG{INT} = sub { $ctx->stop() };
 
+my $book = $ctx->add_entity (
+    name => 'a book',
+    weight => 1,
+    readable => 1,
+    causes => { knowledge => 1 },
+);
+
 my $e1 = $ctx->add_entity (
     name => 'Alice',
     position => { x => 0, y => 0 },
     velocity => 1,
+    inventory => { $book => 1 },
     interactive => {
         eat => undef,
         inspect => undef,
         look_around => undef,
         move => undef, # from pos/vel?
-        take => [],
+        take => undef,
         drop => undef,
         quit => undef,
+        dump => undef,
     }
     );
 

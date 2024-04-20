@@ -30,17 +30,18 @@ class Game:isa(ECS::Tiny::Context)
         nw => Game::Point->new(-1, 1),
     );
 
-    method start()
+    method start($times=undef)
     {
         $self->add_processor(\&get_names);
         $self->add_processor(\&interact_dispatcher);
         $self->add_processor(\&get_positions);
         $self->add_processor(\&greet);
-
+        my $count = 0;
         until ($stop_it)
         {
             $self->update()
                 unless $stop_it;
+            $stop_it = 1 if $times && ++$count >= $times;
         }
     }
 
@@ -54,7 +55,7 @@ class Game:isa(ECS::Tiny::Context)
     {
         %names = ();
         my @components = $self->get_components_by_name('name');
-        for my ($id, $name, $position) (@components)
+        for my ($id, $name) (@components)
         {
             $names{$id} = $name;
         }
@@ -95,21 +96,25 @@ class Game:isa(ECS::Tiny::Context)
     {
         return unless $pos;
         $pos = bless $pos, 'Game::Point';
-        my %adjacent;
-        for my $x ($pos->{x} - $distance .. $pos->{x} + $distance)
-        {
-            for my $y ($pos->{y} - $distance .. $pos->{y} + $distance)
-            {
-                my $p = Game::Point->new($x, $y);
-                next unless $pos->is_within_distance($p, $distance);
-                if (my $entities = $position_to_entities{$p->key()})
-                {
-                    $adjacent{$_} = 1
-                        for $entities->@*
-                }
+
+        return $position_to_entities{$pos->key()}->@*
+            if $position_to_entities{$pos->key()} && $distance < 1;
+
+        my @entities =
+            map { $position_to_entities{$_->key()}->@* }
+            grep {
+                $position_to_entities{$_->key()}
+                && $pos->is_within_distance($_, $distance)
             }
-        }
-        return keys %adjacent
+            map {
+                my $x = $_;
+                map { Game::Point->new($x, $_)->add($pos) }
+                -$distance .. $distance;
+            }
+            -$distance .. $distance;
+        # p @entities, as => 'entities';
+
+        return @entities
     }
 
     method greet ()
@@ -163,11 +168,12 @@ class Game:isa(ECS::Tiny::Context)
                 inspect => method { say "Inspect!" },
                 eat => method { my ($food) = @args; $self->eat($id, $food) },
                 give => method { say "Give!" },
-                take => method { say "Take!" },
+                take => method { my ($item) = @args; $self->take($id, $item) },
                 throw => method { say "Throw!" },
                 accelerate => method { say "Accelerate!" },
                 sleep => method { say "Sleep!" },
                 quit => method { say "Goodbye!"; $stop_it = 1 },
+                dump => method { $self->dump() },
             );
             for my $action (keys %actions)
             {
@@ -177,20 +183,49 @@ class Game:isa(ECS::Tiny::Context)
         }
     }
 
-    method eat ($entity, $item)
+    method take ($entity, $item)
     {
         my $give_up = 0;
         until ($item || $give_up) {
-            say "What would you like to eat?";
+            say "What would you like to take?";
             my $i = <STDIN>;
             chomp $i;
             $give_up = 1 && next() if $i eq '';
             $item = $i
-                if $self->entity_has_component($entity, 'food');
+                if $self->entity_has_component($entity, 'takeable');
         }
         my ($c, $ci) = $self->get_components_for_entity($entity, $item);
+        my $distance = $entity_to_position{$entity}->get_distance($entity_to_position{$item});
+        if ($distance > 1)
+        {
+            say "You can't reach that from here!";
+            return
+        }
         my $name = $names{$entity} // 'Entity';
-        if ($ci && $c->{food})
+        if ($ci && $ci->{weight})
+        {
+            my $item_name = $names{$item} // 'item';
+            $self->remove_component($item, 'position');
+            $entity->{inventory}{$item} = 1;
+            say "$name takes $item_name";
+        } else {
+            say "$name can't take that!";
+        }
+        return
+    }
+
+    method eat ($entity, $item)
+    {
+        my ($c, $ci) = $self->get_components_for_entity($entity, $item);
+        my $inventory = $c->{inventory} // {};
+        my $name = $names{$entity} // 'Entity';
+        my $food_name = $names{$item} // 'item';
+        unless ($inventory->{$item})
+        {
+            say "$name doesn't have $food_name!";
+            return
+        }
+        if ($ci && $ci->{food})
         {
             my $item_name = $names{$item} // 'item';
             say "$name eats $item_name";
@@ -215,28 +250,30 @@ class Game:isa(ECS::Tiny::Context)
             $movement = $dir if $movements{$dir}
         }
         my $offset = $movements{$movement};
-        p $offset, as => 'offset';
+        # p $offset, as => 'offset';
         $c{position} = bless $c{position} => 'Game::Point';
-        p $c{position}, as => 'position';
+        # p $c{position}, as => 'position';
         $c{position}->add($offset);
-        p $c{position}, as => 'new position';
+        # p $c{position}, as => 'new position';
         say "$name is now at [$c{position}{x}/$c{position}{y}]";
         return
     }
 
-    method look_around ($entity, @args)
+    method look_around ($entity, $distance=10)
     {
-        my $distance = 10;
         my ($c) = $self->get_components_for_entity($entity);
-        my %c = $c ? $c->%* : ();
+        return unless $c->{position};
+        my $position = bless $c->{position}, 'Game::Point';
+        # p %names, as => 'names';
         my %adjacent =
             map {
                 $names{$_}
                     ? ($names{$_} => (bless $entity_to_position{$_}, 'Game::Point'))
                     : ()
             }
-            $self->get_adjacent_entities($c{position}, $distance);
-        # p %adjacent, as => 'adjacent named';
+            grep { $_ != $entity }
+            $self->get_adjacent_entities($position, $distance);
+        # %adjacent, as => 'adjacent named';
         my $name = $names{$entity};
         if (%adjacent)
         {
@@ -248,6 +285,8 @@ class Game:isa(ECS::Tiny::Context)
         } else {
             say "$name can see nothing of importance.";
         }
+
+        return \%adjacent
     }
 }
 
