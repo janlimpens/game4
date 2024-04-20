@@ -125,7 +125,7 @@ class Game:isa(ECS::Tiny::Context)
 
         for my ($id, $greeter, $name, $position) (@greeters)
         {
-            my @adjacent = grep { $names{$_} } $self->get_adjacent_entities($position);
+            my @adjacent = grep { $_ ne $id && $names{$_} } $self->get_adjacent_entities($position);
             next unless @adjacent;
             my $weather = $self->get_weather_at_position($position, $all_weather);
             for my $adjacent (@adjacent)
