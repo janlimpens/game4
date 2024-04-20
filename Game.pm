@@ -207,7 +207,7 @@ class Game:isa(ECS::Tiny::Context)
         {
             my $item_name = $names{$item} // 'item';
             $self->remove_component($item, 'position');
-            $entity->{inventory}{$item} = 1;
+            $c->{inventory}{$item} = 1;
             say "$name takes $item_name";
         } else {
             say "$name can't take that!";
@@ -269,7 +269,7 @@ class Game:isa(ECS::Tiny::Context)
         my %adjacent =
             map {
                 $names{$_}
-                    ? ($names{$_} => (bless $entity_to_position{$_}, 'Game::Point'))
+                    ? ("$names{$_} ($_)" => (bless $entity_to_position{$_}, 'Game::Point'))
                     : ()
             }
             grep { $_ != $entity }
