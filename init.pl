@@ -12,13 +12,15 @@ my $book = $ctx->add_entity (
     name => 'a book',
     weight => 1,
     readable => 1,
-    causes => { knowledge => 1 },
+    effects => { knowledge => 1 },
 );
 
 my $e1 = $ctx->add_entity (
     name => 'Alice',
     position => { x => 0, y => 0 },
     velocity => 1,
+    weight => 3000,
+    height => 1.2,
     inventory => { $book => 1 },
     interactive => {
         eat => undef,
@@ -29,8 +31,7 @@ my $e1 = $ctx->add_entity (
         drop => undef,
         quit => undef,
         dump => undef,
-    }
-    );
+    });
 
 my $e2 = $ctx->add_entity (
     name => 'Bob',
@@ -59,7 +60,7 @@ my $tree = $ctx->add_entity (
 my $cookie = $ctx->add_entity (
     name => 'a cookie',
     position => { x => 3, y => 3 },
-    causes => { growth => 0.5 },
+    effects => { growth => 0.5 },
     weight => 10,
     food => 1,
 );
@@ -67,7 +68,7 @@ my $cookie = $ctx->add_entity (
 my $shroom = $ctx->add_entity (
     name => 'a funny mushroom',
     position => { x => 7, y => 8 },
-    causes => { growth => 1.5, hallucination => 1 },
+    effects => { growth => 1.5, hallucination => 1 },
     weight => 5,
     food => 1,
 );

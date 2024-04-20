@@ -30,6 +30,14 @@ class Game:isa(ECS::Tiny::Context)
         nw => Game::Point->new(-1, 1),
     );
 
+    field %units = (
+        weight => 'g',
+        velocity => 'm/s',
+        position => 'm',
+        height => 'm',
+        time => 's',
+    );
+
     method start($times=undef)
     {
         $self->add_processor(\&get_names);
@@ -142,27 +150,32 @@ class Game:isa(ECS::Tiny::Context)
 
     method interact_dispatcher ()
     {
-        my @components = $self->get_components_by_name(qw(interactive));
-        for my ($id, $interactive) (@components)
+        my @components = $self->get_components_by_name(qw(interactive name position));
+        for my ($id, $interactive, $name, $position) (@components)
         {
             my $action;
             my @args;
             until ($action)
             {
-                say sprintf 'What should I do? [%s]', join ', ', sort keys $interactive->%*;
-                my $a = <STDIN>;
-                chomp $a;
+                say sprintf "$name is at %s.", $position->stringify();
+                say sprintf 'What should $name do? [%s]', join ', ', sort keys $interactive->%*;
+                my $input = <STDIN>;
+                chomp $input;
+                my ($a, @a) = split ' ', ($input//'');
                 $a //= '';
-                ($a, @args) = split ' ', ($a);
                 if ($a eq '.' && exists $last_action{$id})
                 {
-                    $a = $last_action{$id};
-                } elsif (exists $interactive->{$a} || exists $interactive->{substr $a ,1, 0} ) {
-                    $last_action{$id} = $action = $a;
+                    ($action, @args) = $last_action{$id}[-1]->@*;
+                    say sprintf 'Repeating last action: %s %s', $action, join ' ', @args;
+                    # p $last_action{$id}, as => 'last_action';
+                } elsif (exists $interactive->{$a}) {
+                    ($action, @args) = ($a, @a);
                 } else {
                     say "I can't do that!";
                 }
             }
+            push $last_action{$id}->@*, [$action, @args];
+            say "Action: $action with args: @args";
             my %actions = (
                 move => method { my ($dir) = @args; $self->move_interactively($id, $dir) },
                 look_around => method { $self->look_around($id) },
@@ -176,10 +189,10 @@ class Game:isa(ECS::Tiny::Context)
                 quit => method { say "Goodbye!"; $stop_it = 1 },
                 dump => method { $self->dump() },
             );
-            for my $action (keys %actions)
-            {
-                $actions{substr($action, 0, 1)} = $actions{$action};
-            }
+            # for my $action (keys %actions)
+            # {
+            #     $actions{substr($action, 0, 1)} = $actions{$action};
+            # }
             $actions{$action}->($self, $id, @args);
         }
     }
@@ -208,6 +221,7 @@ class Game:isa(ECS::Tiny::Context)
             my $item_name = $names{$item} // 'item';
             $self->remove_component($item, 'position');
             $c->{inventory}{$item} = 1;
+            $c->{weight} += $ci->{weight} if $c->{weight};
             say "$name takes $item_name";
         } else {
             say "$name can't take that!";
@@ -230,6 +244,8 @@ class Game:isa(ECS::Tiny::Context)
         {
             my $item_name = $names{$item} // 'item';
             say "$name eats $item_name";
+            $c->{weight} -= $ci->{weight}
+                if $c->{weight} && $ci->{weight};
             $self->remove_entity($item);
         } else {
             say "$name can't eat that!";
