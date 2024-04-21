@@ -25,6 +25,10 @@ my $e2020 = $ctx->add_entity (
     name => 'e(20/20)',
     position => { x => 20, y => 20 } );
 
+my $afflicted = $ctx->add_entity (
+    effect => { growth => { ratio => 2, duration => 3 } }
+);
+
 # $DB::single = 1;
 $ctx->start(1);
 # p $ctx->dump();
@@ -37,6 +41,10 @@ my $look_around = $interactive->look_around($e00, 9);
 # p $look_around, as => 'look around';
 is $look_around->{'e(0/1) (1)'}->key(), '0/1', 'Game::Point', 'look around';
 is $look_around->{'e(7/7) (2)'}->key(), '7/7', 'Game::Point', 'look around';
+
+my @afflicted = $ctx->get_components_by_name('effects');
+p @afflicted;
+
 
 # p $look_around;
 done_testing();

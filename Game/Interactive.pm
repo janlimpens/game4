@@ -59,7 +59,7 @@ class Game::Interactive
                 accelerate => method { say "Accelerate!" },
                 sleep => method { say "Sleep!" },
                 quit => method { say "Goodbye!"; $ctx->stop() },
-                dump => method { $self->dump() },
+                dump => method { $ctx->dump() },
             );
             # for my $action (keys %actions)
             # {
@@ -120,6 +120,11 @@ class Game::Interactive
             $c->{weight} -= $ci->{weight}
                 if $c->{weight} && $ci->{weight};
             $ctx->remove_entity($item);
+            if (my $effects = $ci->{effects})
+            {
+                $c->{suffers} = $effects;
+                say "$name feels something..."
+            }
         } else {
             say "$name can't eat that!";
         }

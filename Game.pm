@@ -41,6 +41,7 @@ class Game:isa(ECS::Tiny::Context)
         $self->add_processor(\&greet);
         my $interactive = Game::Interactive->new(ctx => $self);
         $self->add_processor(sub {$interactive->dispatch()});
+        $self->add_processor(\&suffer);
         my $count = 0;
         until ($stop_it)
         {
@@ -143,6 +144,46 @@ class Game:isa(ECS::Tiny::Context)
             }
         }
         return
+    }
+
+    method suffer ()
+    {
+        my $effect_dispatch = {
+            growth => method($id, $params)
+            {
+                my $ratio = $params->{ratio};
+                my $duration = $params->{duration};
+                my ($c) = $self->get_components_for_entity($id);
+                return unless $c->{height};
+                $c->{height} *= $ratio;
+                my $name = $self->names()->{$id} // 'Entity';
+                my $verb = $ratio > 1 ? 'grows' : 'shrinks';
+                say "$name $verb to $c->{height}m";
+                $params->{duration}--;
+                return
+            },
+            hallucination => method($id, $params) {
+                say 'Everything seems a little bit different.';
+            }
+        };
+
+        for my($id, $effects) ($self->get_components_by_name('suffers'))
+        {
+            # p $effects;
+            for my $e (keys $effects->%*)
+            {
+                if (my $func = $effect_dispatch->{$e})
+                {
+                    $func->($self, $id, $effects->{$e})
+                }
+                if (($effects->{$e}{duration}//0) <= 0)
+                {
+                    delete $effects->{$e};
+                }
+            }
+            $self->remove_component($id, 'suffers')
+                unless $effects->%*;
+        }
     }
 }
 1;

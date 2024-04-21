@@ -60,7 +60,8 @@ my $tree = $ctx->add_entity (
 my $cookie = $ctx->add_entity (
     name => 'a cookie',
     position => { x => 3, y => 3 },
-    effects => { growth => 0.5 },
+    effects => {
+        growth => { ratio => 0.5, duration => 3 } },
     weight => 10,
     food => 1,
 );
@@ -68,7 +69,9 @@ my $cookie = $ctx->add_entity (
 my $shroom = $ctx->add_entity (
     name => 'a funny mushroom',
     position => { x => 7, y => 8 },
-    effects => { growth => 1.5, hallucination => 1 },
+    effects => {
+        growth => { ratio => 2, duration => 3 },
+        hallucination => { duration => 1 } },
     weight => 5,
     food => 1,
 );
