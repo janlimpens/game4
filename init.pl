@@ -21,6 +21,7 @@ my $e1 = $ctx->add_entity (
     velocity => 1,
     weight => 3000,
     height => 1.2,
+    collides => 1,
     inventory => { $book => 1 },
     interactive => {
         eat => undef,
@@ -36,6 +37,7 @@ my $e1 = $ctx->add_entity (
 my $e2 = $ctx->add_entity (
     name => 'Bob',
     position => { x => 5, y => 5 },
+    collides => 1,
     greeter => 1,
     npc => {
         walks_around => 3
@@ -52,10 +54,42 @@ my $e4 = $ctx->add_entity (
     end => { x => 6, y => 6 }
 );
 
-my $tree = $ctx->add_entity (
-    name => 'a large tree',
-    position => { x => 2, y => 2 },
-);
+# my %tree_positions;
+# while (%tree_positions < 10)
+# {
+#     my $x = int rand 20;
+#     my $y = int rand 20;
+#     $tree_positions{"$x,$y"} = Game::Point->new($x, $y);
+# }
+
+# for (values %tree_positions) {
+#     $ctx->add_entity (
+#         name => 'a large tree',
+#         actions => 'climb',
+#         position => $_,
+#     );
+# }
+
+for (6..10)
+{
+    next if $_ == 8;
+    $ctx->add_entity (
+        name => 'a stone wall',
+        position => { x => $_, y => 6 },
+        weight => 1000_000,
+        collides => 1,
+    );
+}
+
+$ctx->add_entity(
+    name => 'a creaky old door',
+    position => { x => 8, y => 6 },
+    weight => 20,
+    collides => 1,
+    accepts => {
+        open => undef,
+        close => undef,
+    });
 
 my $cookie = $ctx->add_entity (
     name => 'a cookie',

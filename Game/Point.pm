@@ -32,13 +32,60 @@ sub is_within_area($self, $area_begin, $area_end)
         $self->{y} >= $area_begin->{y} && $self->{y} <= $area_end->{y}
 }
 
+sub copy($self)
+{
+    return __PACKAGE__->new($self->{x}, $self->{y})
+}
+
 sub add($self, $point)
 {
+    confess 'point must be defined'
+        unless $point;
     $point = __PACKAGE__->from($point)
         if ref($point) ne __PACKAGE__;
+    confess 'value unsupported'
+        unless $point;
     $self->{x} += $point->{x};
     $self->{y} += $point->{y};
     return $self
+}
+
+sub multiply($self, $point)
+{
+    confess 'multiplier must be defined'
+        unless $point;
+    $point = __PACKAGE__->from($point)
+        if ref($point) ne __PACKAGE__;
+    confess 'value unsupported'
+        unless $point;
+    $self->{x} *= $point->{x};
+    $self->{y} *= $point->{y};
+    return $self
+}
+
+sub get_points_between($self, $point)
+{
+    confess 'point must be defined'
+        unless $point;
+    $point = __PACKAGE__->from($point)
+        if ref($point) ne __PACKAGE__;
+    confess 'value unsupported'
+        unless $point;
+    return if $self->equals($point);
+    my @points;
+    my $dx = $point->{x} - $self->{x};
+    my $dy = $point->{y} - $self->{y};
+    my $steps = abs($dx) > abs($dy) ? abs($dx) : abs($dy);
+    my $x_step = $dx / $steps;
+    my $y_step = $dy / $steps;
+    for my $i (1 .. $steps-1)
+    {
+        push @points, __PACKAGE__->new(
+            $self->{x} + int($x_step * $i + 0.5),
+            $self->{y} + int($y_step * $i + 0.5)
+        )
+    }
+    return @points
 }
 
 sub equals($self, $point)

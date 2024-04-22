@@ -6,19 +6,12 @@ use feature 'class';
 class Game::Interactive
 {
     no warnings qw(experimental);
+    use Carp;
+    use DDP;
+    use List::Util qw(any);
 
     field $ctx :param;
     field %last_action;
-    field %movements = (
-        n  => Game::Point->new(0, 1),
-        ne => Game::Point->new(1, 1),
-        e  => Game::Point->new(1, 0),
-        se => Game::Point->new(1, -1),
-        s  => Game::Point->new(0, -1),
-        sw => Game::Point->new(-1, -1),
-        w  => Game::Point->new(-1, 0),
-        nw => Game::Point->new(-1, 1),
-    );
 
     method dispatch()
     {
@@ -29,7 +22,6 @@ class Game::Interactive
             my @args;
             until ($action)
             {
-                say sprintf "$name is at %s.", $position->stringify();
                 say sprintf 'What should %s do? [%s]', $name, join ', ', sort keys $interactive->%*;
                 my $input = <STDIN>;
                 chomp $input;
@@ -43,28 +35,26 @@ class Game::Interactive
                 } elsif (exists $interactive->{$a}) {
                     ($action, @args) = ($a, @a);
                 } else {
-                    say "I can't do that!";
+                    say "I can't do that ($a)!";
                 }
             }
             push $last_action{$id}->@*, [$action, @args];
-            say "Action: $action with args: @args";
+            # say "Action: $action with args: @args";
             my %actions = (
-                move => method { my ($dir) = @args; $self->move_interactively($id, $dir) },
-                look_around => method { $self->look_around($id) },
-                inspect => method { say "Inspect!" },
+                accelerate => method { say "Accelerate!" },
+                climb => method { say "Climb!" },
+                dump => method { $ctx->dump(@args) },
                 eat => method { my ($food) = @args; $self->eat($id, $food) },
                 give => method { say "Give!" },
+                inspect => method { say "Inspect!" },
+                look_around => method { $self->look_around($id) },
+                move => method { my ($dir) = @args; $self->move($id, $dir) },
+                quit => method { say "Goodbye!"; $ctx->stop() },
+                sleep => method { say "Sleep!" },
                 take => method { my ($item) = @args; $self->take($id, $item) },
                 throw => method { say "Throw!" },
-                accelerate => method { say "Accelerate!" },
-                sleep => method { say "Sleep!" },
-                quit => method { say "Goodbye!"; $ctx->stop() },
-                dump => method { $ctx->dump() },
+                use => method { say "Use!" },
             );
-            # for my $action (keys %actions)
-            # {
-            #     $actions{substr($action, 0, 1)} = $actions{$action};
-            # }
             $actions{$action}->($self, $id, @args);
         }
     }
@@ -131,23 +121,23 @@ class Game::Interactive
         return
     }
 
-    method move_interactively ($entity, $movement)
+    method move ($entity, $movement=undef)
     {
-        my ($c) = $ctx->get_components_for_entity($entity);
-        my %c = $c ? $c->%* : ();
-        my $velocity = $c{velocity} //= { x => 0, y => 0 };
         my $name = $ctx->names()->{$entity} // 'Entity';
-        until ($movement && $movements{$movement})
+        until ($movement && $ctx->movements()->{$movement})
         {
             say "Move $name ($entity) to where? [n, ne, e, se, s, sw, w, nw]";
             my $dir = <STDIN>;
             chomp $dir;
-            $movement = $dir if $movements{$dir}
+            $movement = $dir if $self->movements()->{$dir}
         }
-        my $offset = $movements{$movement};
-        $c{position} = bless $c{position} => 'Game::Point';
-        $c{position}->add($offset);
-        say "$name is now at [$c{position}{x}/$c{position}{y}]";
+        my ($c) = $ctx->get_components_for_entity($entity);
+        my $current_pos = $c->{position};
+        confess 'No position for entity!'
+            unless $current_pos;
+        my $velocity = $c->{velocity} //= 1;
+        $ctx->move_entity($entity, $current_pos, $velocity, $movement);
+        say "$name is now at [$c->{position}{x}/$c->{position}{y}]";
         return
     }
 
@@ -155,7 +145,7 @@ class Game::Interactive
     {
         my ($c) = $ctx->get_components_for_entity($entity);
         return unless $c->{position};
-        my $position = bless $c->{position}, 'Game::Point';
+        my $position = bless $c->{position} => 'Game::Point';
         my %adjacent =
             map {
                 my $name = $ctx->names()->{$_};

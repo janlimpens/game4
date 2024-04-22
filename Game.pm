@@ -13,20 +13,52 @@ class Game:isa(ECS::Tiny::Context)
     use DDP;
     use builtin qw(true false);
     use Carp qw(croak confess);
-    use List::Util qw(all any);
+    use List::Util qw(all any first);
 
     field %position_to_entities;
     field %entity_to_position;
+    field %entity_movements;
     field %names;
     field $stop_it;
+    field %greeted;
 
-    field %units = (
+    field $units = {
         weight => 'g',
         velocity => 'm/s',
         position => 'm',
         height => 'm',
         time => 's',
-    );
+    };
+    method units() { return $units }
+
+    method dump(@what)
+    {
+        if (!@what || grep { $_ eq 'entities' } @what)
+        {
+            $self->SUPER::dump();
+        }
+        if (grep { $_ eq 'names' } @what)
+        {
+            p %names, as => 'names';
+        }
+        if (grep { $_ eq 'positions' } @what)
+        {
+            p %position_to_entities, as => 'positions';
+        }
+        return
+    }
+
+    field $movements ={
+        n  => Game::Point->new(0, 1),
+        ne => Game::Point->new(1, 1),
+        e  => Game::Point->new(1, 0),
+        se => Game::Point->new(1, -1),
+        s  => Game::Point->new(0, -1),
+        sw => Game::Point->new(-1, -1),
+        w  => Game::Point->new(-1, 0),
+        nw => Game::Point->new(-1, 1)
+    };
+    method movements() { return $movements }
 
     method position_to_entities(){ return \%position_to_entities }
 
@@ -80,9 +112,37 @@ class Game:isa(ECS::Tiny::Context)
         {
             bless $position, 'Game::Point';
             push $position_to_entities{ $position->key() }->@*, $id;
-            $entity_to_position{ $id } = bless $position, 'Game::Point';
+            $entity_to_position{ $id } = $position;
+            push $entity_movements{ $id }->@*, $position;
         }
 
+        return
+    }
+
+    method has_collission($position)
+    {
+        my $ents = $self->position_to_entities()->{$position->key()};
+        return false unless $ents;
+        return first { $self->get_components_for_entity($_)->{collides} } $ents->@*
+    }
+
+    method move_entity ($entity, $current_pos, $velocity, $movement=undef)
+    {
+        my $offset = $movements->{$movement}->multiply(Game::Point->new($velocity, $velocity));
+        my $target = $current_pos->copy()->add($offset);
+        my @points_between = $current_pos->get_points_between($target);
+        for my $point (@points_between, $target)
+        {
+            if (my $with = $self->has_collission($point))
+            {
+                my $name = $names{$entity} // "Entity ($entity)";
+                my $other = $names{$with} // "Entity ($with)";
+                say "$name bumps into $other!";
+                last
+            }
+            $current_pos->{x} = $point->{x};
+            $current_pos->{y} = $point->{y};
+        }
         return
     }
 
@@ -135,12 +195,13 @@ class Game:isa(ECS::Tiny::Context)
             my @adjacent = grep { $_ ne $id && $names{$_} } $self->get_adjacent_entities($position);
             next unless @adjacent;
             my $weather = $self->get_weather_at_position($position, $all_weather);
-            for my $adjacent (@adjacent)
+            for my $adjacent (grep { !$greeted{$id}{$_} } @adjacent)
             {
                 my $adj_name = $names{$adjacent};
                 say STDERR $weather
                     ? "$name: Hello $adj_name! The weather is $weather, today."
                     : "$name: Hello $adj_name!";
+                $greeted{$id}{$adjacent} = 1;
             }
         }
         return

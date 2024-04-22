@@ -13,9 +13,13 @@ class ECS::Tiny::Context
     field @processors;
     field $next_entity_id = 0;
 
-    method dump()
+    method dump(@what)
     {
-        p %entities;
+        if (!@what || grep { $_ eq 'entities' } @what)
+        {
+            p %entities, as => 'entities';
+            return
+        }
         return
     }
 
@@ -49,7 +53,10 @@ class ECS::Tiny::Context
 
     method get_components_for_entity (@entity_id)
     {
-        return map { $entities{$_} } @entity_id
+        my @components = map { $entities{$_} } @entity_id;
+        return @entity_id == 1 && !wantarray
+            ? $components[0]
+            : @components
     }
 
     method entity_has_component ($entity_id, @component_name)
