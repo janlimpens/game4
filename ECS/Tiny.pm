@@ -59,6 +59,11 @@ class ECS::Tiny::Context
             : @components
     }
 
+    method entity_exists($entity_id)
+    {
+        return exists $entities{$entity_id}
+    }
+
     method entity_has_component ($entity_id, @component_name)
     {
         return unless @component_name;

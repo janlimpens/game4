@@ -53,10 +53,35 @@ class Game::Interactive
                 sleep => method { say "Sleep!" },
                 take => method { my ($item) = @args; $self->take($id, $item) },
                 throw => method { say "Throw!" },
-                use => method { say "Use!" },
+                open => method { my ($door, $key) = @args; $self->open($id, $door, 'open', $key) },
+                close => method { my ($door, $key) = @args; $self->open($id, $door, 'close', $key)},
             );
             $actions{$action}->($self, $id, @args);
         }
+    }
+
+    method open ($entity, $item, $action='open', $key=undef)
+    {
+        confess 'Action can be either open or close!'
+            unless $action eq 'open' || $action eq 'close';
+        my $name = $ctx->get_name($entity);
+        if (!$ctx->is_within_distance($entity, $item, 1))
+        {
+            say "$name can't reach that!";
+            return
+        }
+        my ($c, $ci) = $ctx->get_components_for_entity($entity, $item);
+        my $item_name = $ctx->get_name($item);
+        my $action_name = $action eq 'open' ? 'opens' : 'closes';
+        return if $ci->{key} && $ci->{key} ne $key;
+        if ($ci && $ci->{opens})
+        {
+            $ci->{collides} = $action eq 'open' ? 0 : 1;
+            say "$name $action_name $item_name.";
+        } else {
+            say "$name can't open that!";
+        }
+        return
     }
 
     method take ($entity, $item)

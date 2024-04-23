@@ -66,6 +66,12 @@ class Game:isa(ECS::Tiny::Context)
 
     method names() { return \%names }
 
+    method get_name($entity)
+    {
+        return unless $self->entity_exists($entity);
+        return $names{$entity} // "Entity ($entity)"
+    }
+
     method start($times=undef)
     {
         $self->add_processor(\&get_names);
@@ -124,6 +130,13 @@ class Game:isa(ECS::Tiny::Context)
         my $ents = $self->position_to_entities()->{$position->key()};
         return false unless $ents;
         return first { $self->get_components_for_entity($_)->{collides} } $ents->@*
+    }
+
+    method is_within_distance($entity, $other, $distance)
+    {
+        my $pos = $self->entity_to_position()->{$entity};
+        my $other_pos = $self->entity_to_position()->{$other};
+        return $pos->get_distance($other_pos) <= $distance
     }
 
     method move_entity ($entity, $current_pos, $velocity, $movement=undef)

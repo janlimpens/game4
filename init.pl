@@ -32,6 +32,8 @@ my $e1 = $ctx->add_entity (
         drop => undef,
         quit => undef,
         dump => undef,
+        open => undef,
+        close => undef,
     });
 
 my $e2 = $ctx->add_entity (
@@ -86,10 +88,7 @@ $ctx->add_entity(
     position => { x => 8, y => 6 },
     weight => 20,
     collides => 1,
-    accepts => {
-        open => undef,
-        close => undef,
-    });
+    opens => 1);
 
 my $cookie = $ctx->add_entity (
     name => 'a cookie',
