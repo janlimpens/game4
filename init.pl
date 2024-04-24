@@ -72,12 +72,12 @@ my $e4 = $ctx->add_entity (
 #     );
 # }
 
-for (6..10)
+for (0..5)
 {
-    next if $_ == 8;
+    next if $_ == 3;
     $ctx->add_entity (
         name => 'a stone wall',
-        position => { x => $_, y => 6 },
+        position => { x => $_, y => 2 },
         weight => 1000_000,
         collides => 1,
     );
@@ -85,14 +85,16 @@ for (6..10)
 
 $ctx->add_entity(
     name => 'a creaky old door',
-    position => { x => 8, y => 6 },
+    position => { x => 3, y => 2 },
     weight => 20,
     collides => 1,
-    opens => 1);
+    opens => 1,
+    height => 0.6,
+);
 
 my $cookie = $ctx->add_entity (
     name => 'a cookie',
-    position => { x => 3, y => 3 },
+    position => { x => 3, y => 1 },
     effects => {
         growth => { ratio => 0.5, duration => 3 } },
     weight => 10,

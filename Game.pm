@@ -62,6 +62,12 @@ class Game:isa(ECS::Tiny::Context)
 
     method position_to_entities(){ return \%position_to_entities }
 
+    method entities_at_position($pos)
+    {
+        my $ents = $position_to_entities{ref $pos ? $pos->key() : $pos};
+        return $ents//[]
+    }
+
     method entity_to_position(){ return \%entity_to_position }
 
     method names() { return \%names }
@@ -125,6 +131,19 @@ class Game:isa(ECS::Tiny::Context)
         return
     }
 
+    # we call this at the end of the round and actually set the position.
+    # Now we can check, whether the attempted move is valid.
+    # method set_positions()
+    # {
+    #     for my ($id, $position) ($self->get_components_by_name('position'))
+    #     {
+    #         next if $entity_to_position{$id}->equals($position);
+    #         if ()
+    #         $entity_to_position{$id} = $position;
+    #         push $position_to_entities{$position->key()}->@*, $id;
+    #     }
+    # }
+
     method has_collission($position)
     {
         my $ents = $self->position_to_entities()->{$position->key()};
@@ -152,6 +171,24 @@ class Game:isa(ECS::Tiny::Context)
                 my $other = $names{$with} // "Entity ($with)";
                 say "$name bumps into $other!";
                 last
+            }
+            my $c = $self->get_components_for_entity($entity);
+            if (my $height = $c->{height})
+            {
+                my ($min_height) =
+                    sort
+                    map { $_->{height} // () }
+                    grep { $_->{opens} }
+                    map { $self->get_components_for_entity($_) // ()}
+                    grep { $_ != $entity }
+                    $self->entities_at_position($point)->@*;
+                $min_height //= $height;
+                if ($min_height < $height)
+                {
+                    my $name = $names{$entity} // "Entity ($entity)";
+                    say "$name doesn't fit through ($min_height m)!";
+                    last
+                }
             }
             $current_pos->{x} = $point->{x};
             $current_pos->{y} = $point->{y};
