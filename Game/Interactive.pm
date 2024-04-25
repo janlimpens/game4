@@ -12,6 +12,7 @@ class Game::Interactive
 
     field $ctx :param;
     field %last_action;
+    field %targets;
 
     method dispatch()
     {
@@ -22,6 +23,7 @@ class Game::Interactive
             my @args;
             until ($action)
             {
+                $self->look_around($id, 1);
                 say sprintf 'What should %s do? [%s]', $name, join ', ', sort keys $interactive->%*;
                 my $input = <STDIN>;
                 chomp $input;
@@ -43,21 +45,29 @@ class Game::Interactive
             my %actions = (
                 accelerate => method { say "Accelerate!" },
                 climb => method { say "Climb!" },
+                close => method { my ($door, $key) = @args; $self->open($id, $door, 'close', $key)},
                 dump => method { $ctx->dump(@args) },
                 eat => method { my ($food) = @args; $self->eat($id, $food) },
                 give => method { say "Give!" },
+                go_to => method { my ($target) = @args; $self->go_to($id, $target) },
                 inspect => method { say "Inspect!" },
                 look_around => method { $self->look_around($id) },
                 move => method { my ($dir) = @args; $self->move($id, $dir) },
+                open => method { my ($door, $key) = @args; $self->open($id, $door, 'open', $key) },
                 quit => method { say "Goodbye!"; $ctx->stop() },
                 sleep => method { say "Sleep!" },
                 take => method { my ($item) = @args; $self->take($id, $item) },
                 throw => method { say "Throw!" },
-                open => method { my ($door, $key) = @args; $self->open($id, $door, 'open', $key) },
-                close => method { my ($door, $key) = @args; $self->open($id, $door, 'close', $key)},
             );
             $actions{$action}->($self, $id, @args);
         }
+    }
+
+    method go_to ($entity, $target)
+    {
+        $targets{$entity} = $target;
+        my $pos = $ctx->entity_to_position()->{$entity};
+        my $target_pos = $ctx->entity_to_position()->{$target};
     }
 
     method open ($entity, $item, $action='open', $key=undef)

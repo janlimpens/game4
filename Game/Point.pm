@@ -98,6 +98,14 @@ sub key($self)
     return "$self->{x}/$self->{y}"
 }
 
+sub switch_xy($self)
+{
+    my $x = $self->{x};
+    $self->{x} = $self->{y};
+    $self->{y} = $x;
+    return $self
+}
+
 sub stringify($self)
 {
     return $self->key()

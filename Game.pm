@@ -48,7 +48,7 @@ class Game:isa(ECS::Tiny::Context)
         return
     }
 
-    field $movements ={
+    field $movements = {
         n  => Game::Point->new(0, 1),
         ne => Game::Point->new(1, 1),
         e  => Game::Point->new(1, 0),
@@ -58,6 +58,7 @@ class Game:isa(ECS::Tiny::Context)
         w  => Game::Point->new(-1, 0),
         nw => Game::Point->new(-1, 1)
     };
+
     method movements() { return $movements }
 
     method position_to_entities(){ return \%position_to_entities }
