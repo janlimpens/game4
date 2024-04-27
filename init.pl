@@ -24,16 +24,16 @@ my $e1 = $ctx->add_entity (
     collides => 1,
     inventory => { $book => 1 },
     interactive => {
+        close => undef,
+        drop => undef,
+        dump => undef,
         eat => undef,
-        inspect => undef,
+        go_to => undef,
         look_around => undef,
         move => undef, # from pos/vel?
-        take => undef,
-        drop => undef,
-        quit => undef,
-        dump => undef,
         open => undef,
-        close => undef,
+        quit => undef,
+        take => undef,
     });
 
 my $e2 = $ctx->add_entity (

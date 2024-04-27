@@ -15,9 +15,18 @@ class ECS::Tiny::Context
 
     method dump(@what)
     {
+        $, = ', ';
+        say @what ? "Dumping @what" : 'Dumping all';
         if (!@what || grep { $_ eq 'entities' } @what)
         {
             p %entities, as => 'entities';
+            return
+        }
+        if (my @ent = @entities{@what})
+        {
+            my @e = grep { $_ } @ent;
+            p @e, as => "entities @what"
+                if @e;
             return
         }
         return

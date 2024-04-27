@@ -6,6 +6,7 @@ use feature 'class';
 use ECS::Tiny;
 use Game::Point;
 use Game::Interactive;
+use Game::Path;
 
 class Game:isa(ECS::Tiny::Context)
 {
@@ -21,7 +22,7 @@ class Game:isa(ECS::Tiny::Context)
     field %names;
     field $stop_it;
     field %greeted;
-
+    field %obstacles;
     field $units = {
         weight => 'g',
         velocity => 'm/s',
@@ -29,14 +30,12 @@ class Game:isa(ECS::Tiny::Context)
         height => 'm',
         time => 's',
     };
+
     method units() { return $units }
 
     method dump(@what)
     {
-        if (!@what || grep { $_ eq 'entities' } @what)
-        {
-            $self->SUPER::dump();
-        }
+        $self->SUPER::dump(@what);
         if (grep { $_ eq 'names' } @what)
         {
             p %names, as => 'names';
@@ -44,6 +43,10 @@ class Game:isa(ECS::Tiny::Context)
         if (grep { $_ eq 'positions' } @what)
         {
             p %position_to_entities, as => 'positions';
+        }
+        if (grep { $_ eq 'obstacles' } @what)
+        {
+            p %obstacles, as => 'obstacles';
         }
         return
     }
@@ -83,6 +86,7 @@ class Game:isa(ECS::Tiny::Context)
     {
         $self->add_processor(\&get_names);
         $self->add_processor(\&get_positions);
+        $self->add_processor(\&get_obstacles);
         $self->add_processor(\&greet);
         my $interactive = Game::Interactive->new(ctx => $self);
         $self->add_processor(sub {$interactive->dispatch()});
@@ -132,6 +136,27 @@ class Game:isa(ECS::Tiny::Context)
         return
     }
 
+    method get_obstacles()
+    {
+        %obstacles = ();
+        for my ($id, $collides, $position) ($self->get_components_by_name('collides', 'position'))
+        {
+            next unless $collides;
+            $position = bless $position, 'Game::Point';
+            bless $position, 'Game::Point';
+            $obstacles{$position->key()} = undef;
+        }
+        for my ($id, $height, $position) ($self->get_components_by_name('height', 'position'))
+        {
+            next unless $height;
+            $position = bless $position, 'Game::Point';
+            next unless $obstacles{$position->key()};
+            bless $position, 'Game::Point';
+            $obstacles{$position->key()} = $height;
+        }
+        return
+    }
+
     # we call this at the end of the round and actually set the position.
     # Now we can check, whether the attempted move is valid.
     # method set_positions()
@@ -158,6 +183,14 @@ class Game:isa(ECS::Tiny::Context)
         my $other_pos = $self->entity_to_position()->{$other};
         return $pos->get_distance($other_pos) <= $distance
     }
+
+=head3
+
+move_entity moves an entity in a given direction [n nw w ...].
+It checks for collissions and will stop if something is in the way.
+It also checks for height restrictions and will stop if the entity is too low to
+fit through.
+=cut
 
     method move_entity ($entity, $current_pos, $velocity, $movement=undef)
     {
@@ -297,5 +330,44 @@ class Game:isa(ECS::Tiny::Context)
                 unless $effects->%*;
         }
     }
+
+    method go_to ($entity, $target)
+    {
+        state %targets;
+        my $c = $self->get_components_for_entity($entity);
+        $targets{$entity} = $target;
+        my $pos = $self->entity_to_position()->{$entity};
+        my $target_pos = $self->entity_to_position()->{$target};
+        unless ($target_pos)
+        {
+            delete $targets{$entity};
+            say "No such target!";
+            return
+        }
+        if ($pos->equals($target_pos))
+        {
+            delete $targets{$entity};
+            my $name = $self->get_name($entity);;
+            say sprintf "$name has arrived at %s!", $target_pos->stringify();
+            return
+        }
+        my $height = $c->{height};
+        # for my ($id, $opens, $position) ($self->get_components_by_name('opens', 'position'))
+        # {
+        #     bless $position, 'Game::Point';
+        #     delete $obstacles_positions($position->key());
+        # }
+        my $path = Game::Path->new (
+            start => $pos,
+            end => $target_pos,
+            obstacles => [ map { Game::Point->from($_) } keys %obstacles ]);
+        my @path = $path->find($pos, $target_pos);
+        my $velocity = $c->{velocity} // 1;
+        my $next_pos = $path[$velocity]//$path[-1];
+        $pos->{x} = $next_pos->{x};
+        $pos->{y} = $next_pos->{y};
+        return
+    }
 }
+
 1;

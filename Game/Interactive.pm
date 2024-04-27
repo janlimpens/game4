@@ -12,7 +12,6 @@ class Game::Interactive
 
     field $ctx :param;
     field %last_action;
-    field %targets;
 
     method dispatch()
     {
@@ -29,12 +28,13 @@ class Game::Interactive
                 chomp $input;
                 my ($a, @a) = split ' ', ($input//'');
                 $a //= '';
-                if ($a eq '.' && exists $last_action{$id})
+                if ($a eq '' && exists $last_action{$id})
                 {
                     ($action, @args) = $last_action{$id}[-1]->@*;
                     say sprintf 'Repeating last action: %s %s', $action, join ' ', @args;
                     # p $last_action{$id}, as => 'last_action';
-                } elsif (exists $interactive->{$a}) {
+                }
+                elsif (exists $interactive->{$a}) {
                     ($action, @args) = ($a, @a);
                 } else {
                     say "I can't do that ($a)!";
@@ -49,7 +49,7 @@ class Game::Interactive
                 dump => method { $ctx->dump(@args) },
                 eat => method { my ($food) = @args; $self->eat($id, $food) },
                 give => method { say "Give!" },
-                go_to => method { my ($target) = @args; $self->go_to($id, $target) },
+                go_to => method { my ($target) = @args; $ctx->go_to($id, $target) },
                 inspect => method { say "Inspect!" },
                 look_around => method { $self->look_around($id) },
                 move => method { my ($dir) = @args; $self->move($id, $dir) },
@@ -61,13 +61,6 @@ class Game::Interactive
             );
             $actions{$action}->($self, $id, @args);
         }
-    }
-
-    method go_to ($entity, $target)
-    {
-        $targets{$entity} = $target;
-        my $pos = $ctx->entity_to_position()->{$entity};
-        my $target_pos = $ctx->entity_to_position()->{$target};
     }
 
     method open ($entity, $item, $action='open', $key=undef)
