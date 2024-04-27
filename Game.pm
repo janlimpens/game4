@@ -127,6 +127,7 @@ class Game:isa(ECS::Tiny::Context)
 
         for my ($id, $position) (@components)
         {
+            # p $position, as => 'position';
             bless $position, 'Game::Point';
             push $position_to_entities{ $position->key() }->@*, $id;
             $entity_to_position{ $id } = $position;
@@ -334,6 +335,7 @@ fit through.
     method go_to ($entity, $target)
     {
         state %targets;
+        p %targets, as => 'targets';
         my $c = $self->get_components_for_entity($entity);
         $targets{$entity} = $target;
         my $pos = $self->entity_to_position()->{$entity};
@@ -357,15 +359,20 @@ fit through.
         #     bless $position, 'Game::Point';
         #     delete $obstacles_positions($position->key());
         # }
+        # $DB::single = 1;
         my $path = Game::Path->new (
             start => $pos,
             end => $target_pos,
             obstacles => [ map { Game::Point->from($_) } keys %obstacles ]);
         my @path = $path->find($pos, $target_pos);
         my $velocity = $c->{velocity} // 1;
-        my $next_pos = $path[$velocity]//$path[-1];
-        $pos->{x} = $next_pos->{x};
-        $pos->{y} = $next_pos->{y};
+        my $next_pos = bless(($path[$velocity]//$path[-1]), 'Game::Point');
+        if ($next_pos)
+        {
+            $pos->{x} = $next_pos->{x};
+            $pos->{y} = $next_pos->{y};
+            say sprintf "Moving to %s", $next_pos->stringify();
+        }
         return
     }
 }

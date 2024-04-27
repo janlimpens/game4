@@ -2,6 +2,7 @@
 
 use v5.38;
 use lib '.';
+use Carp::Always;
 use Game;
 
 my $ctx = Game->new();
@@ -12,8 +13,7 @@ my $book = $ctx->add_entity (
     name => 'a book',
     weight => 1,
     readable => 1,
-    effects => { knowledge => 1 },
-);
+    effects => { knowledge => 1 }, );
 
 my $e1 = $ctx->add_entity (
     name => 'Alice',
@@ -48,13 +48,12 @@ my $e2 = $ctx->add_entity (
 my $e3 = $ctx->add_entity (
     weather => 'nice',
     start => { x => 0, y => 0 },
-    end => { x => 10, y => 10 });
+    end => { x => 10, y => 10 } );
 
 my $e4 = $ctx->add_entity (
     weather => 'terrible',
     start => { x => 3, y => 3 },
-    end => { x => 6, y => 6 }
-);
+    end => { x => 6, y => 6 } );
 
 # my %tree_positions;
 # while (%tree_positions < 10)
@@ -79,8 +78,7 @@ for (0..5)
         name => 'a stone wall',
         position => { x => $_, y => 2 },
         weight => 1000_000,
-        collides => 1,
-    );
+        collides => 1,);
 }
 
 $ctx->add_entity(
@@ -89,8 +87,7 @@ $ctx->add_entity(
     weight => 20,
     collides => 1,
     opens => 1,
-    height => 0.6,
-);
+    height => 0.6);
 
 my $cookie = $ctx->add_entity (
     name => 'a cookie',
@@ -98,8 +95,7 @@ my $cookie = $ctx->add_entity (
     effects => {
         growth => { ratio => 0.5, duration => 3 } },
     weight => 10,
-    food => 1,
-);
+    food => 1);
 
 my $shroom = $ctx->add_entity (
     name => 'a funny mushroom',
@@ -108,7 +104,12 @@ my $shroom = $ctx->add_entity (
         growth => { ratio => 2, duration => 3 },
         hallucination => { duration => 1 } },
     weight => 5,
-    food => 1,
-);
+    food => 1);
+
+my $pizza = $ctx->add_entity(
+    name => "Artur's pizza",
+    position => { x => 7, y => 5 },
+    weight => 400,
+    food => 1);
 
 $ctx->start();

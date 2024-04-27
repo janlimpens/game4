@@ -140,8 +140,8 @@ class Game::Interactive
             $ctx->remove_entity($item);
             if (my $effects = $ci->{effects})
             {
+                say "$name feels something...";
                 $c->{suffers} = $effects;
-                say "$name feels something..."
             }
         } else {
             say "$name can't eat that!";
