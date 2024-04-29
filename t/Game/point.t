@@ -45,12 +45,12 @@ subtest 'get_points_between' => sub
     my $further_away = my @p = $point1->get_points_between($point3);
     # p @p;
     is scalar $further_away, 17, 'Further away points ok';
-    for my $p (reverse ($point1, @p, $point3)) {
-        print STDERR "\n";
-        for ($point1->{y}..$point3->{y}) {
-            print STDERR $p->{y} == $_ ? 'X' : '.';
-        }
-    }
+    # for my $p (reverse ($point1, @p, $point3)) {
+    #     print STDERR "\n";
+    #     for ($point1->{y}..$point3->{y}) {
+    #         print STDERR $p->{y} == $_ ? 'X' : '.';
+    #     }
+    # }
 };
 
 done_testing();

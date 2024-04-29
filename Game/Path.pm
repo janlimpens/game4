@@ -11,6 +11,7 @@ class Game::Path
 
     field $start :param;
     field $end :param;
+    # an array of {x,y} or Points
     field $obstacles :param;
     field $search_limit :param = 5; # Configurable limit for search area growth
 

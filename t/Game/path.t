@@ -14,15 +14,9 @@ sub draw_way_through($board, $path)
         $board_copy->[$point->{y}][$point->{x}] = '@';
     }
     for my $row ($board_copy->@*) {
-        say STDERR join '', map { $_ ? " $_ " : ' . ' } $row->@*;
+        # say STDERR join '', map { $_ ? " $_ " : ' . ' } $row->@*;
     }
 }
-
-my $empty_board = [
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0]];
 
 my $with_obstacles = [
     reverse
@@ -48,10 +42,11 @@ sub get_obstacles($board)
     my @obstacles;
     for my $y (0..$board->$#*) {
         for my $x (0..$board->[$y]->$#*) {
-            push @obstacles, { x => $x, y => $y } if $board->[$y][$x];
+            push @obstacles, { x => $x, y => $y }
+                if $board->[$y][$x];
         }
     }
-    return @obstacles;
+    return \@obstacles;
 }
 
 subtest simple_horizontal => sub
@@ -61,7 +56,7 @@ subtest simple_horizontal => sub
     my $path = Game::Path->new(
         start => $start,
         end => $end,
-        obstacles => get_obstacles($empty_board));
+        obstacles => []);
     my @points = map { Game::Point->from($_) } $path->find($start, $end);
     is scalar @points, 3, '3 points';
     is $points[0]->key(), '1/0', '1/0';
@@ -76,7 +71,7 @@ subtest simple_vertical => sub
     my $path = Game::Path->new(
         start => $start,
         end => $end,
-        obstacles => get_obstacles($empty_board));
+        obstacles => []);
     my @points = map { Game::Point->from($_) } $path->find($start, $end);
     is scalar @points, 3, '3 points';
     is $points[0]->key(), '0/1', '0/1';
@@ -88,7 +83,10 @@ subtest simple_diagonal => sub
 {
     my $start = Game::Point->new(0, 0);
     my $end = Game::Point->new(3, 3);
-    my $path = Game::Path->new(start => $start, end => $end, obstacles =>  $empty_board);
+    my $path = Game::Path->new(
+        start => $start,
+        end => $end,
+        obstacles => []);
     my @points = map { Game::Point->from($_) } $path->find($start, $end);
     is scalar @points, 3, '3 points';
     is $points[0]->key(), '1/1', '1/1';
@@ -100,7 +98,10 @@ subtest with_obstacles => sub
 {
     my $start = Game::Point->new(0, 0);
     my $end = Game::Point->new(3, 3);
-    my $path = Game::Path->new(start => $start, end => $end, obstacles =>  $with_obstacles);
+    my $path = Game::Path->new(
+        start => $start,
+        end => $end,
+        obstacles => get_obstacles($with_obstacles));
     my @points = map { Game::Point->from($_) } $path->find($start, $end);
     is scalar @points, 5, 'path found';
     my @obstacles = grep { $with_obstacles->[$_->{y}][$_->{x}] } @points;
@@ -111,7 +112,10 @@ subtest labyrinth => sub
 {
     my $start = Game::Point->new(0, 0);
     my $end = Game::Point->new(9, 9);
-    my $path = Game::Path->new(start => $start, end => $end, obstacles =>  $labyrinth);
+    my $path = Game::Path->new(
+        start => $start,
+        end => $end,
+        obstacles => get_obstacles($labyrinth));
     my @points = map { Game::Point->from($_) } $path->find($start, $end);
     draw_way_through($labyrinth, \@points);
     is scalar @points, 33, 'path found';
