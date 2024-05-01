@@ -29,7 +29,6 @@ my $e1 = $ctx->add_entity (
         dump => undef,
         eat => undef,
         go_to => undef,
-        look_around => undef,
         move => undef, # from pos/vel?
         open => undef,
         quit => undef,
@@ -78,6 +77,7 @@ for (0..5)
         name => 'a stone wall',
         position => { x => $_, y => 2 },
         weight => 1000_000,
+        height => 3,
         collides => 1,);
 }
 

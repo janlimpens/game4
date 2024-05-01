@@ -8,6 +8,7 @@ class Game::Interactive
     no warnings qw(experimental);
     use Carp;
     use DDP;
+    use Game::Visibility;
     use List::Util qw(any);
 
     field $ctx :param;
@@ -22,11 +23,11 @@ class Game::Interactive
             my @args;
             until ($action)
             {
-                $self->look_around($id, 1);
+                $self->look_around($id, 50);
                 say sprintf 'What should %s do? [%s]', $name, join ', ', sort keys $interactive->%*;
                 my $input = <STDIN>;
-                chomp $input;
-                my ($a, @a) = split ' ', ($input//'');
+                # chomp $input;
+                my ($a, @a) = split /\s+/, ($input//'');
                 $a //= '';
                 if ($a eq '' && exists $last_action{$id})
                 {
@@ -41,7 +42,7 @@ class Game::Interactive
                 }
             }
             push $last_action{$id}->@*, [$action, @args];
-            # say "Action: $action with args: @args";
+            say "Action: $action with args: @args";
             my %actions = (
                 accelerate => method { say "Accelerate!" },
                 climb => method { say "Climb!" },
@@ -169,32 +170,53 @@ class Game::Interactive
         return
     }
 
-    method look_around ($entity, $distance=10)
+    method look_around ($entity, $distance=50)
     {
         my ($c) = $ctx->get_components_for_entity($entity);
-        return unless $c->{position};
-        my $position = bless $c->{position} => 'Game::Point';
-        my %adjacent =
-            map {
-                my $name = $ctx->names()->{$_};
-                $name
-                    ? ("$name ($_)" => (bless $ctx->entity_to_position()->{$_}, 'Game::Point'))
-                    : ()
-            }
-            grep { $_ != $entity }
-            $ctx->get_adjacent_entities($position, $distance);
-        my $name = $ctx->names()->{$entity};
-        if (%adjacent)
+        return unless
+            my $position = bless $c->{position} => 'Game::Point';
+        my @visible =  $ctx->get_components_by_name('position', 'name');
+        my @id_position_height;
+        for my ($id, $position, $name) (@visible)
         {
-            say sprintf '%s sees: %s',
-            $name,
-            join "\n",
-            map { "$_ at [$adjacent{$_}{x}/$adjacent{$_}{y}]" }
-            keys %adjacent;
-        } else {
-            say "$name can see nothing of importance.";
-        }
+            next if $id == $entity;
+            my $c = $ctx->get_components_for_entity($id);
+            my $x = {
+                id => $id,
+                pos => $position,
+                name => $name,
+                height => ($c->{height}//0) };
 
-        return \%adjacent
+            push @id_position_height, $x;
+        }
+        my $v = Game::Visibility->new(
+            entities => [
+                map { $_->{id}, $_->{pos}, $_->{height} }
+                @id_position_height
+            ],
+        );
+
+        my %in_sight =
+            map { $ctx->get_name($_) => $ctx->entity_to_position()->{$_} }
+            grep { $_ != $entity }
+            $v->visible_entities($position, $distance);
+
+        my $name = $ctx->names()->{$entity};
+        my $p = $position->stringify();
+        if (%in_sight)
+        {
+            say "$name at $p sees:";
+            say
+            join "\n",
+            map { " - $_ at " .  $in_sight{$_}->stringify() }
+            sort {
+                $position->get_distance($in_sight{$a})
+                <=>
+                $position->get_distance($in_sight{$b}) }
+            keys %in_sight;
+        } else {
+            say "$name can see nothing of importance from $p.";
+        }
+        return \%in_sight
     }
 }

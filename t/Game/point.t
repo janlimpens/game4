@@ -53,4 +53,10 @@ subtest 'get_points_between' => sub
     # }
 };
 
+subtest parses_negative_value => sub
+{
+    my $point = Game::Point->from('-1/-2');
+    is $point->key(), '-1/-2';
+};
+
 done_testing();

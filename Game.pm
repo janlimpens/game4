@@ -48,6 +48,10 @@ class Game:isa(ECS::Tiny::Context)
         {
             p %obstacles, as => 'obstacles';
         }
+        if ( grep { $_ eq 'map' } @what )
+        {
+            $self->draw_map();
+        }
         return
     }
 
@@ -79,7 +83,15 @@ class Game:isa(ECS::Tiny::Context)
     method get_name($entity)
     {
         return unless $self->entity_exists($entity);
-        return $names{$entity} // "Entity ($entity)"
+        return $self->get_name_or_undef($entity) // "Entity (#$entity)"
+    }
+
+    method get_name_or_undef($entity)
+    {
+        return unless $self->entity_exists($entity);
+        return "$names{$entity} (#$entity)"
+            if $names{$entity};
+        return
     }
 
     method start($times=undef)
@@ -335,7 +347,7 @@ fit through.
     method go_to ($entity, $target)
     {
         state %targets;
-        p %targets, as => 'targets';
+        # p %targets, as => 'targets';
         my $c = $self->get_components_for_entity($entity);
         $targets{$entity} = $target;
         my $pos = $self->entity_to_position()->{$entity};
@@ -365,6 +377,7 @@ fit through.
             end => $target_pos,
             obstacles => [ map { Game::Point->from($_) } keys %obstacles ]);
         my @path = $path->find($pos, $target_pos);
+        p @path;
         my $velocity = $c->{velocity} // 1;
         my $next_pos = bless(($path[$velocity]//$path[-1]), 'Game::Point');
         if ($next_pos)
@@ -374,6 +387,60 @@ fit through.
             say sprintf "Moving to %s", $next_pos->stringify();
         }
         return
+    }
+
+    method find_min_max_points (@points)
+    {
+        my $min_x = $points[0]->{x};
+        my $min_y = $points[0]->{y};
+        my $max_x = $points[0]->{x};
+        my $max_y = $points[0]->{y};
+
+        for my $point (@points) {
+            $min_x = $point->{x} if $point->{x} < $min_x;
+            $min_y = $point->{y} if $point->{y} < $min_y;
+            $max_x = $point->{x} if $point->{x} > $max_x;
+            $max_y = $point->{y} if $point->{y} > $max_y;
+        }
+
+        my $min_point = bless { x => $min_x, y => $min_y }, 'Game::Point';
+        my $max_point = bless { x => $max_x, y => $max_y }, 'Game::Point';
+
+        return ($min_point, $max_point)
+    }
+
+    method draw_map()
+    {
+        my @points = sort { $a->{x} + $a->{y} <=> $b->{x} + $b->{y} }
+            map { Game::Point->from($_) }
+            keys %position_to_entities;
+        # p @points, as => 'points';
+        my ($min, $max) = $self->find_min_max_points(@points);
+
+        # p $min, as => 'min';
+        # p $max, as => 'max';
+        print "   ";
+        print "$_ "
+            for ($min->{x} .. $max->{x});
+        print "\n";
+        for my $y (reverse $min->{y} .. $max->{y})
+        {
+            print "$y: ";
+            for my $x ($min->{x} .. $max->{x})
+            {
+                my $pos = Game::Point->new($x, $y);
+                my ($ent) = $self->entities_at_position($pos)->@*;
+                if ($ent && (my $name = $self->get_name_or_undef($ent)))
+                {
+                    $name = $name =~ s/^((?:a.?|the)\s?)//r;
+                    print substr($name, 0, 1);
+                } else {
+                    print '.';
+                }
+                print ' ';
+            }
+            print "\n";
+        }
     }
 }
 

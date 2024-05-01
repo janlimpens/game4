@@ -3,6 +3,8 @@ use v5.38;
 use DDP;
 
 use Carp qw(confess croak);
+use Scalar::Util qw(looks_like_number);
+no warnings 'experimental::builtin';
 
 sub new($class, $x=0, $y=0)
 {
@@ -122,7 +124,7 @@ sub from($class, $value)
                 ? $value->@*
                 : ();
     croak "$value is not a valid Point"
-        if !defined($x//$y) || $x =~ /\D/ || $y =~ /\D/;
+        if !defined($x//$y) || !looks_like_number($x)  || !looks_like_number($y);
     return $class->new($x, $y)
 }
 

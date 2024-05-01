@@ -1,9 +1,9 @@
 use v5.38;
 use DDP;
 use Exporter 'import';
-our @EXPORT = qw(take);
+our @EXPORT = qw(take_n);
 
-sub take ($n, @list)
+sub take_n ($n, @list)
 {
     my @result;
     while (my @slice = splice @list, 0, $n)
@@ -11,12 +11,6 @@ sub take ($n, @list)
         push @result, \@slice;
     }
     return @result
-}
-
-sub nth ($n, @list)
-{
-    map { $_->[$n-1] }
-    take( $n, @list )
 }
 
 1;

@@ -123,6 +123,20 @@ subtest labyrinth => sub
     ok !@obstacles, 'no obstacles';
 };
 
+subtest short_distances => sub
+{
+    my $start = Game::Point->new(0, 0);
+    my $end = Game::Point->new(3, 1);
+    my $path = Game::Path->new(
+        start => $start,
+        end => $end,
+        obstacles => []);
+    my @points = map { Game::Point->from($_) } $path->find($start, $end);
+    # p @points;
+    ok @points, 'path found';
+    is scalar(@points), 3;
+};
+
 done_testing();
 
 1;

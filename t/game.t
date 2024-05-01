@@ -32,15 +32,21 @@ my $afflicted = $ctx->add_entity (
 # $DB::single = 1;
 $ctx->start(1);
 # p $ctx->dump();
-my @adjacent = $ctx->get_adjacent_entities({ x => 0, y => 1 }, 5);
 
-is \@adjacent, [ $e00, $e01 ], 'adjacent entities';
-
-my $interactive = Game::Interactive->new(ctx=>$ctx);
-my $look_around = $interactive->look_around($e00, 9);
+my $interactive = Game::Interactive->new( ctx => $ctx );
+# $DB::single = 1;
+my $look_around = $interactive->look_around($e00, 10);
 # p $look_around, as => 'look around';
-is $look_around->{'e(0/1) (1)'}->key(), '0/1', 'Game::Point', 'look around';
-is $look_around->{'e(7/7) (2)'}->key(), '7/7', 'Game::Point', 'look around';
+
+if (ok $look_around->{'e(0/1) (#1)'}, 'point 0/1 exists')
+{
+    is $look_around->{'e(0/1) (#1)'}->key(), '0/1', 'Game::Point', 'look around';
+}
+
+if (ok $look_around->{'e(7/7) (#2)'}, 'point 7/7 exists')
+{
+    is $look_around->{'e(7/7) (#2)'}->key(), '7/7', 'Game::Point', 'look around';
+}
 
 my @afflicted = $ctx->get_components_by_name('effects');
 # p @afflicted;
