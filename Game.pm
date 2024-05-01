@@ -347,7 +347,6 @@ fit through.
     method go_to ($entity, $target)
     {
         state %targets;
-        # p %targets, as => 'targets';
         my $c = $self->get_components_for_entity($entity);
         $targets{$entity} = $target;
         my $pos = $self->entity_to_position()->{$entity};
@@ -366,12 +365,6 @@ fit through.
             return
         }
         my $height = $c->{height};
-        # for my ($id, $opens, $position) ($self->get_components_by_name('opens', 'position'))
-        # {
-        #     bless $position, 'Game::Point';
-        #     delete $obstacles_positions($position->key());
-        # }
-        # $DB::single = 1;
         my $path = Game::Path->new (
             start => $pos,
             end => $target_pos,

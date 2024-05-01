@@ -54,31 +54,30 @@ my $e4 = $ctx->add_entity (
     start => { x => 3, y => 3 },
     end => { x => 6, y => 6 } );
 
-# my %tree_positions;
-# while (%tree_positions < 10)
-# {
-#     my $x = int rand 20;
-#     my $y = int rand 20;
-#     $tree_positions{"$x,$y"} = Game::Point->new($x, $y);
-# }
+my %tree_positions;
+while (%tree_positions < 10)
+{
+    my $x = int rand 20;
+    my $y = int rand 20;
+    $tree_positions{"$x,$y"} = Game::Point->new($x, $y);
+}
 
-# for (values %tree_positions) {
-#     $ctx->add_entity (
-#         name => 'a large tree',
-#         actions => 'climb',
-#         position => $_,
-#     );
-# }
+for (values %tree_positions) {
+    $ctx->add_entity (
+        name => 'a large tree',
+        actions => 'climb',
+        position => $_,
+    );
+}
 
 for (0..5)
 {
-    next if $_ == 3;
     $ctx->add_entity (
         name => 'a stone wall',
         position => { x => $_, y => 2 },
         weight => 1000_000,
         height => 3,
-        collides => 1,);
+        collides => $_ != 3,);
 }
 
 $ctx->add_entity(
@@ -90,7 +89,7 @@ $ctx->add_entity(
     height => 0.6);
 
 my $cookie = $ctx->add_entity (
-    name => 'a cookie',
+    name => 'a yummy cookie',
     position => { x => 3, y => 1 },
     effects => {
         growth => { ratio => 0.5, duration => 3 } },
@@ -108,8 +107,9 @@ my $shroom = $ctx->add_entity (
 
 my $pizza = $ctx->add_entity(
     name => "Artur's pizza",
-    position => { x => 7, y => 5 },
+    position => { x => 0, y => 3 },
     weight => 400,
     food => 1);
+
 
 $ctx->start();
