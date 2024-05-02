@@ -121,7 +121,7 @@ class Game:isa(ECS::Tiny::Context)
     method get_names ()
     {
         %names = ();
-        my @components = $self->get_components_by_name('name');
+        my @components = $self->get_components_tuple_by_name('name');
         for my ($id, $name) (@components)
         {
             $names{$id} = $name;
@@ -135,7 +135,7 @@ class Game:isa(ECS::Tiny::Context)
         %position_to_entities = ();
         %entity_to_position = ();
 
-        my @components = $self->get_components_by_name('position');
+        my @components = $self->get_components_tuple_by_name('position');
 
         for my ($id, $position) (@components)
         {
@@ -152,14 +152,14 @@ class Game:isa(ECS::Tiny::Context)
     method get_obstacles()
     {
         %obstacles = ();
-        for my ($id, $collides, $position) ($self->get_components_by_name('collides', 'position'))
+        for my ($id, $collides, $position) ($self->get_components_tuple_by_name('collides', 'position'))
         {
             next unless $collides;
             $position = bless $position, 'Game::Point';
             bless $position, 'Game::Point';
             $obstacles{$position->key()} = undef;
         }
-        for my ($id, $height, $position) ($self->get_components_by_name('height', 'position'))
+        for my ($id, $height, $position) ($self->get_components_tuple_by_name('height', 'position'))
         {
             next unless $height;
             $position = bless $position, 'Game::Point';
@@ -174,7 +174,7 @@ class Game:isa(ECS::Tiny::Context)
     # Now we can check, whether the attempted move is valid.
     # method set_positions()
     # {
-    #     for my ($id, $position) ($self->get_components_by_name('position'))
+    #     for my ($id, $position) ($self->get_components_tuple_by_name('position'))
     #     {
     #         next if $entity_to_position{$id}->equals($position);
     #         if ()
@@ -283,9 +283,9 @@ fit through.
 
     method greet ()
     {
-        my $all_weather = [reverse $self->get_components_by_name('weather', 'start', 'end')];
+        my $all_weather = [reverse $self->get_components_tuple_by_name('weather', 'start', 'end')];
 
-        my @greeters = $self->get_components_by_name('greeter', 'name', 'position');
+        my @greeters = $self->get_components_tuple_by_name('greeter', 'name', 'position');
 
         for my ($id, $greeter, $name, $position) (@greeters)
         {
@@ -325,7 +325,7 @@ fit through.
             }
         };
 
-        for my($id, $effects) ($self->get_components_by_name('suffers'))
+        for my($id, $effects) ($self->get_components_tuple_by_name('suffers'))
         {
             # p $effects;
             for my $e (keys $effects->%*)

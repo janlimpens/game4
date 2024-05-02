@@ -22,30 +22,35 @@ class Game::Visibility
         bless $pov, 'Game::Point';
         my @entities_in_range;
         my %by_angle;
-        for my ($id, $pos, $h) ($entities->@*)
+        # p $entities;
+        for my ($entity, $c) ($entities->%*)
         {
-            my $distance = $pos->get_distance($pov);
+            my $pos = $c->{position};
+            my $distance = $pov->get_distance($pos);
             next if $distance > $radius;
             my $angle = atan2($pos->{y} - $pov->{y}, $pos->{x} - $pov->{x});
             push $by_angle{$angle}->@*, {
-                id => $id,
-                pos => $pos,
-                height => $h,
+                # height => ($c->{height}//0),
+                $c->%*,
+                id => $entity,
                 distance => $distance };
         }
         my @result;
         for my $homogon (values %by_angle )
         {
             my @homogon = sort { $a->{distance} <=> $b->{distance} } $homogon->@*;
+            # p @homogon;
             my $height = 0;
-            for my $ent ($homogon->@*)
+            for my $ent (@homogon)
             {
+                # p $ent->{id};
                 next if $height && $ent->{height} <= $height;
                 $height = $ent->{height};
                 push @result, $ent->{id};
             }
         }
         @result = sort @result;
+        # p @result;
         return @result
     }
 }

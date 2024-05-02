@@ -86,12 +86,21 @@ class ECS::Tiny::Context
         return
     }
 
-    method get_components_by_name (@component_names)
+    method get_components_tuple_by_name (@component_names)
     {
         return
             map { my $e = $_; $e => map { $entities{$e}->{$_} } @component_names }
             sort
             grep { my $e = $_; all { exists $entities{$e}->{$_} } @component_names }
+            keys %entities;
+    }
+
+    method get_components_by_name(@names)
+    {
+        return
+            map { $_ => $entities{$_} }
+            sort
+            grep { my $e = $_; all { exists $entities{$e}->{$_} } @names }
             keys %entities;
     }
 

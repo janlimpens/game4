@@ -16,7 +16,7 @@ class Game::Interactive
 
     method dispatch()
     {
-        my @components = $ctx->get_components_by_name(qw(interactive name position));
+        my @components = $ctx->get_components_tuple_by_name(qw(interactive name position));
         for my ($id, $interactive, $name, $position) (@components)
         {
             my $action;
@@ -175,27 +175,10 @@ class Game::Interactive
         my ($c) = $ctx->get_components_for_entity($entity);
         return unless
             my $position = bless $c->{position} => 'Game::Point';
-        my @visible =  $ctx->get_components_by_name('position', 'name');
-        my @id_position_height;
-        for my ($id, $position, $name) (@visible)
-        {
-            next if $id == $entity;
-            my $c = $ctx->get_components_for_entity($id);
-            my $x = {
-                id => $id,
-                pos => $position,
-                name => $name,
-                height => ($c->{height}//0) };
-
-            push @id_position_height, $x;
-        }
+        my %visible =  $ctx->get_components_by_name('position', 'name');
         my $v = Game::Visibility->new(
-            entities => [
-                map { $_->{id}, $_->{pos}, $_->{height} }
-                @id_position_height
-            ],
+            entities => \%visible
         );
-
         my %in_sight =
             map { $ctx->get_name($_) => $ctx->entity_to_position()->{$_} }
             grep { $_ != $entity }

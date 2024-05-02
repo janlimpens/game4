@@ -48,7 +48,7 @@ if (ok $look_around->{'e(7/7) (#2)'}, 'point 7/7 exists')
     is $look_around->{'e(7/7) (#2)'}->key(), '7/7', 'Game::Point', 'look around';
 }
 
-my @afflicted = $ctx->get_components_by_name('effects');
+my @afflicted = $ctx->get_components_tuple_by_name('effects');
 # p @afflicted;
 
 
